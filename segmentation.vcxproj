@@ -84,11 +84,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="registration.h" />
-    <ClInclude Include="segmentation.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="registration.cpp" />
-    <ClCompile Include="segmentation.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

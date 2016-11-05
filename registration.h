@@ -10,7 +10,6 @@ public:
 
 	cv::Mat construct_M(const std::vector<cv::Vec3d>& pts, cv::Vec3d& c);
 
-	void icp(cv::Mat& pc_P, cv::Mat& pc_Q);
 	void icp(std::vector<cv::Vec3d>& pc_P, std::vector<cv::Vec3d>& pc_Q, 
 		 std::vector<cv::Vec3d>& transformed_pc_Q );
 

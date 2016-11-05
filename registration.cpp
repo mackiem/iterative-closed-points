@@ -32,7 +32,10 @@ cv::Mat Registration::load_depth_img(std::string filename) {
 	cv::Mat falseColorsMap;
 	cv::applyColorMap(adjMap, falseColorsMap, cv::COLORMAP_JET);
 
-	cv::imshow("Out", falseColorsMap);
+	auto pos = filename.find('.');
+	filename.replace(pos, 1, 1, '_');
+	cv::imwrite(filename + ".jpg", falseColorsMap);
+	cv::imshow(filename, falseColorsMap);
 
 	//cv::Mat show_img;
 	//cv::convertScaleAbs(depth_img, show_img);
@@ -122,15 +125,50 @@ void Registration::icp(std::vector<cv::Vec3d>& pc_P, std::vector<cv::Vec3d>& pc_
 	std::vector<cv::Vec3d> P_prime;
 	std::vector<cv::Vec3d> Q_prime;
 
-	for (int p_i = 0; p_i < pc_P.size(); ++p_i) {
+	//for (int p_i = 0; p_i < pc_P.size(); ++p_i) {
 
-		cv::Vec3d pt_P = pc_P[p_i];
+	//	cv::Vec3d pt_P = pc_P[p_i];
 
-		if (cv::norm(pt_P) > 1e-8) {
+	//	if (cv::norm(pt_P) > 1e-8) {
+	//		std::vector<PCDiff> pc_diffs;
+	//		for (int q_i = 0; q_i < pc_Q.size(); ++q_i) {
+	//			cv::Vec3d pt_Q = pc_Q[q_i];
+	//			if (cv::norm(pt_Q) > 1e-8) {
+	//				double distance = cv::norm(pt_P - pt_Q);
+	//				if (distance < threshold) {
+	//					PCDiff point_cloud_diff;
+	//					point_cloud_diff.p_i = p_i;
+	//					point_cloud_diff.q_i = q_i;
+	//					point_cloud_diff.dist = distance;
+	//					pc_diffs.push_back(point_cloud_diff);
+	//				}
+	//			}
+	//		}
+
+	//		if (pc_diffs.size() > 0) {
+	//			// sort by euclidean distance
+	//			std::sort(pc_diffs.begin(), pc_diffs.end(), [](const PCDiff& left, const PCDiff& right)
+	//			{
+	//				return left.dist < right.dist;
+	//			});
+
+	//			// pick 1st as the correspondence pair, which is guaranteed to exist
+	//			auto closest_point_pair = pc_diffs[0];
+	//			P_prime.push_back(pt_P);
+	//			Q_prime.push_back(pc_Q[closest_point_pair.q_i]);
+	//		}
+	//	}
+	//}
+
+	for (int q_i = 0; q_i < pc_Q.size(); ++q_i) {
+
+		cv::Vec3d pt_Q = pc_Q[q_i];
+
+		if (cv::norm(pt_Q) > 1e-8) {
 			std::vector<PCDiff> pc_diffs;
-			for (int q_i = 0; q_i < pc_Q.size(); ++q_i) {
-				cv::Vec3d pt_Q = pc_Q[q_i];
-				if (cv::norm(pt_Q) > 1e-8) {
+			for (int p_i = 0; p_i < pc_P.size(); ++p_i) {
+				cv::Vec3d pt_P = pc_P[p_i];
+				if (cv::norm(pt_P) > 1e-8) {
 					double distance = cv::norm(pt_P - pt_Q);
 					if (distance < threshold) {
 						PCDiff point_cloud_diff;
@@ -151,7 +189,7 @@ void Registration::icp(std::vector<cv::Vec3d>& pc_P, std::vector<cv::Vec3d>& pc_
 
 				// pick 1st as the correspondence pair, which is guaranteed to exist
 				auto closest_point_pair = pc_diffs[0];
-				P_prime.push_back(pt_P);
+				P_prime.push_back(pc_P[closest_point_pair.p_i]);
 				Q_prime.push_back(pc_Q[closest_point_pair.q_i]);
 			}
 		}
@@ -171,7 +209,8 @@ void Registration::icp(std::vector<cv::Vec3d>& pc_P, std::vector<cv::Vec3d>& pc_
 	cv::Mat rotated_Q_c = R * cv::Mat(Q_c);
 	cv::Vec3d t = P_c - cv::Vec3d(rotated_Q_c);
 
-	cv::Mat T(4, 4, CV_64F);
+	cv::Mat T = cv::Mat::zeros(4, 4, CV_64F);
+	T.at<double>(3, 3) = 1.0;
 
 	cv::Mat tmp = T(cv::Rect(0, 0, 3, 3));
 	R.copyTo(tmp);
@@ -209,92 +248,6 @@ void Registration::write_point_cloud(std::vector<cv::Vec3d>& pc_P, std::string p
 
 }
 
-void Registration::icp(cv::Mat& pc_P, cv::Mat& pc_Q) {
-
-	struct PCDiff {
-		int col_p;
-		int row_p;
-
-		int col_q;
-		int row_q;
-
-		double dist;
-	};
-
-	double threshold = 0.1;
-
-	std::vector<cv::Vec3d> P_prime;
-	std::vector<cv::Vec3d> Q_prime;
-
-
-
-	for (int row_p = 0; row_p < pc_P.rows; ++row_p) {
-		for (int col_p = 0; col_p < pc_P.cols; ++col_p) {
-			cv::Vec3d pt_P = pc_P.at<cv::Vec3d>(row_p, col_p);
-			if (cv::norm(pt_P) > 1e-8) {
-				std::vector<PCDiff> pc_diffs;
-				for (int row_q = 0; row_q < pc_Q.rows; ++row_q) {
-					for (int col_q = 0; col_q < pc_Q.cols; ++col_q) {
-						cv::Vec3d pt_Q = pc_Q.at<cv::Vec3d>(row_q, col_q);
-						if (cv::norm(pt_Q) > 1e-8) {
-							double distance = cv::norm(pt_P - pt_Q);
-							if (distance < threshold) {
-								PCDiff point_cloud_diff;
-								point_cloud_diff.col_p = col_p;
-								point_cloud_diff.row_p = row_p;
-
-								point_cloud_diff.col_q = col_q;
-								point_cloud_diff.row_q = row_q;
-
-								point_cloud_diff.dist = distance;
-								pc_diffs.push_back(point_cloud_diff);
-							}
-						}
-					}
-				}
-
-				if (pc_diffs.size() > 0) {
-					// sort by euclidean distance
-					std::sort(pc_diffs.begin(), pc_diffs.end(), [](const PCDiff& left, const PCDiff& right)
-					{
-						return left.dist < right.dist;
-					});
-					
-					// pick 1st as the correspondence pair, which is guaranteed to exist
-					auto closest_point_pair = pc_diffs[0];
-					P_prime.push_back(pt_P);
-					Q_prime.push_back(pc_Q.at<cv::Vec3d>(closest_point_pair.row_q, closest_point_pair.row_q));
-				}
-			}
-		}
-	}
-
-
-	// construct M_q, M_p
-	cv::Vec3d P_c, Q_c;
-	cv::Mat M_p = construct_M(P_prime, P_c);
-	cv::Mat M_q = construct_M(Q_prime, Q_c);
-
-	cv::Mat C = M_q * M_p.t();
-
-	cv::Mat u, sigma, vt;
-	cv::SVD::compute(C, sigma, u, vt);
-
-	cv::Mat R = vt.t() * u.t();
-	cv::Mat rotated_Q_c = R * cv::Mat(Q_c);
-	cv::Vec3d t = P_c - cv::Vec3d(rotated_Q_c);
-
-	cv::Mat T(4, 4, CV_64F);
-
-	cv::Mat tmp = T(cv::Rect(0, 0, 3, 3));
-	R.copyTo(tmp);
-
-	for (int k = 0; k < 3; ++k) {
-		T.at<double>(k, 3) = t[k];
-	}
-	
-
-}
 
 Registration::Registration()
 {
@@ -315,6 +268,7 @@ int main(int argc, char** argv) {
 	for (auto& filename : filenames) {
 		cv::Mat depth_img = registration.load_depth_img(filename);
 
+
 		// K
 		cv::Mat K = cv::Mat::zeros(3, 3, CV_64F);
 		K.at<double>(0, 0) = 365;
@@ -329,30 +283,23 @@ int main(int argc, char** argv) {
 
 	std::vector<cv::Vec3d> P = point_clouds[0];
 	std::vector<cv::Vec3d> Q = point_clouds[1];
+	std::vector<cv::Vec3d> original_Q = Q;
 
 	registration.write_point_cloud(P, "P");
 	registration.write_point_cloud(Q, "Q");
 
 	const int M = 20;
-	for (int i = 0; i < M; ++i) {
-		std::vector<cv::Vec3d> transformed_Q;
-		registration.icp(P, Q, transformed_Q);
-		Q = transformed_Q;
+	const int M_array[] = { 1, 2, 5, 10, 15, 20 };
+
+	for (int iter : M_array) {
+		Q = original_Q;
+		for (int i = 0; i < iter; ++i) {
+			std::vector<cv::Vec3d> transformed_Q;
+			registration.icp(P, Q, transformed_Q);
+			Q = transformed_Q;
+		}
+		registration.write_point_cloud(Q, "transformed_Q_" + std::to_string(iter));
 	}
-
-	registration.write_point_cloud(Q, "transformed_Q");
-	
-
-
-
-	//std::vector<cv::Mat> channels;
-	//cv::split(point_cloud, channels);
-
-	//std::string axes[] = { "x", "y", "z" };
-	//for (int i = 0; i < 3; ++i) {
-	//	std::ofstream xstream(axes[i] + ".txt");
-	//	xstream << cv::format(channels[i], "matlab");
-	//}
 
 	cv::waitKey();
 	

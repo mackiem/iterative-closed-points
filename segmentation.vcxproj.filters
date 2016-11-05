@@ -15,17 +15,11 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="segmentation.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="registration.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="segmentation.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="registration.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
